@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demostración de distribución de contenido con Amazon CloudFront y un origen S3 privado.">
+  <title>Amazon CloudFront · Demostración</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">AWS / DISTRIBUCIÓN DE CONTENIDO</p>
+    <h1>Amazon CloudFront</h1>
+    <p class="intro">Un sitio, distribuido desde el borde.</p>
+    <p>Esta demostración configura HTTPS y caché en CloudFront, con archivos almacenados en un bucket S3 privado. El panel consulta una respuesta real para mostrar desde dónde se entrega el contenido.</p>
+    <div class="architecture" aria-label="Arquitectura: navegador, CloudFront y S3 privado">
+      <span>Navegador</span><span aria-hidden="true">→</span><strong>CloudFront</strong><span aria-hidden="true">→</span><span>S3 privado</span>
+    </div>
+    <section aria-labelledby="verification-title">
+      <div class="section-heading">
+        <h2 id="verification-title">Comprobar la entrega</h2>
+        <button id="verify" type="button">Consultar de nuevo</button>
+      </div>
+      <p id="status" role="status" aria-live="polite">Consultando el despliegue…</p>
+      <dl>
+        <div><dt>Dominio</dt><dd id="domain">—</dd></div>
+        <div><dt>Respuesta de caché · X-Cache</dt><dd id="cache">—</dd></div>
+        <div><dt>Punto de presencia · X-Amz-Cf-Pop</dt><dd id="pop">—</dd></div>
+        <div><dt>Ruta · Via</dt><dd id="via">—</dd></div>
+        <div><dt>Edad del objeto · Age</dt><dd id="age">—</dd></div>
+        <div><dt>Identificador de petición · X-Amz-Cf-Id</dt><dd id="request">—</dd></div>
+        <div><dt>Despliegue</dt><dd id="deployment">—</dd></div>
+        <div><dt>Commit</dt><dd id="commit">—</dd></div>
+        <div><dt>Publicado · UTC</dt><dd id="published">—</dd></div>
+      </dl>
+      <p class="note">Repite la consulta para observar la caché. <code>Hit from cloudfront</code> indica un acierto; <code>Miss from cloudfront</code> indica que se solicitó el objeto al origen. El punto de presencia puede variar.</p>
+    </section>
+    <footer>Infraestructura reproducible con AWS CloudFormation · Origin Access Control · Sin acceso público al bucket</footer>
+  </main>
+</body>
+</html>
