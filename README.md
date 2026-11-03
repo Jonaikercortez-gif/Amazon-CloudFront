@@ -28,7 +28,7 @@ cd Amazon-CloudFront
 bash scripts/deploy.sh
 ```
 
-Usa estos comandos después de subir los archivos de este proyecto a GitHub. Para un checkout existente, actualízalo sin descartar cambios propios. También puedes ejecutar el script en este entorno cuando tenga una identidad AWS conectada, o en tu equipo con AWS CLI autenticado. No guardes credenciales en el repositorio.
+Estos comandos suponen que los archivos ya están integrados en `main`. Mientras estén en la rama `codex/cloudfront-demo`, agrega `--branch codex/cloudfront-demo` al comando `git clone`. Para un checkout existente, actualízalo sin descartar cambios propios. También puedes ejecutar el script en este entorno cuando tenga una identidad AWS conectada, o en tu equipo con AWS CLI autenticado. No guardes credenciales en el repositorio.
 
 Valores predeterminados: región `us-east-1`, stack `amazon-cloudfront-demo`, `PriceClass_100`. Para cambiarlos:
 
