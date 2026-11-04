@@ -3,3 +3,11 @@ __pycache__/
 *.pyc
 evidence/
 .DS_Store
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+infra/terraform/backend.auto.tf.json
+crash.log

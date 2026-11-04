@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: cloudfront-${{ vars.STACK_NAME || 'amazon-cloudfront-demo' }}
+  group: cloudfront-${{ vars.PROJECT_NAME || 'amazon-cloudfront-tf' }}
   cancel-in-progress: false
 
 jobs:
@@ -21,7 +21,10 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-      STACK_NAME: ${{ vars.STACK_NAME || 'amazon-cloudfront-demo' }}
+      PROJECT_NAME: ${{ vars.PROJECT_NAME || 'amazon-cloudfront-tf' }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_STATE_KEY: ${{ vars.TF_STATE_KEY || 'amazon-cloudfront-tf/terraform.tfstate' }}
+      TF_STATE_REGION: ${{ vars.TF_STATE_REGION || vars.AWS_REGION || 'us-east-1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,20 +32,24 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements-dev.txt
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.17.1'
+          terraform_wrapper: false
       - name: Validate before deploying
         run: |
           python -m pip install -r requirements-dev.txt
-          cfn-lint infra/cloudfront.yaml
-          bash -n scripts/deploy.sh
-          node --check site/app.js
-          node tests/site.test.cjs
-          python -m unittest discover -s tests -v
+          python scripts/validate.py
       - name: Check AWS role configuration
         env:
           AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
         run: |
           if [ -z "$AWS_ROLE_ARN" ]; then
-            echo 'Configura la variable AWS_ROLE_ARN del environment aws-demo. Consulta README.md.' >&2
+            echo 'Configura AWS_ROLE_ARN en el environment aws-demo. Consulta docs/despliegue-aws.md.' >&2
+            exit 1
+          fi
+          if [ -z "$TF_STATE_BUCKET" ]; then
+            echo 'Configura TF_STATE_BUCKET: el estado debe conservarse fuera del runner. Consulta docs/despliegue-aws.md.' >&2
             exit 1
           fi
       - name: Authenticate with AWS using OIDC
@@ -51,6 +58,21 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: github-cloudfront-demo
+      - name: Configure persistent Terraform state
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          backend = {"terraform": {"backend": {"s3": {
+              "bucket": os.environ["TF_STATE_BUCKET"],
+              "key": os.environ["TF_STATE_KEY"],
+              "region": os.environ["TF_STATE_REGION"],
+              "encrypt": True,
+              "use_lockfile": True,
+          }}}}
+          Path('infra/terraform/backend.auto.tf.json').write_text(json.dumps(backend, indent=2) + '\n')
+          PY
       - name: Deploy and verify
         run: bash scripts/deploy.sh
       - name: Upload real deployment evidence
@@ -58,6 +80,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cloudfront-evidence-${{ github.run_id }}
-          path: evidence/
+          path: |
+            evidence/outputs.json
+            evidence/verification.json
           if-no-files-found: ignore
           retention-days: 14

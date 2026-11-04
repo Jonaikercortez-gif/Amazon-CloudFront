@@ -15,11 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
+    terraform = shutil.which('terraform') or str(ROOT.parent / '.terraform-tools/bin/terraform')
+    terraform_command = [terraform, '-chdir=infra/terraform']
     commands = [
-        ('CloudFormation schema and references', [shutil.which('cfn-lint') or str(Path(sys.executable).with_name('cfn-lint')), 'infra/cloudfront.yaml']),
+        ('Terraform format', terraform_command + ['fmt', '-check', '-recursive']),
+        ('Terraform provider initialization', terraform_command + ['init', '-backend=false', '-input=false', '-lockfile=readonly', '-no-color']),
+        ('Terraform configuration validation', terraform_command + ['validate', '-no-color']),
+        ('Terraform mocked AWS plan tests', terraform_command + ['test', '-no-color']),
         ('Deployment script syntax', ['bash', '-n', 'scripts/deploy.sh']),
         ('Browser script syntax', ['node', '--check', 'site/app.js']),
-        ('Infrastructure and verifier tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v']),
+        ('HTTP verifier tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v']),
         ('Browser panel tests', ['node', 'tests/site.test.cjs']),
     ]
     evidence_dir = ROOT / 'evidence'
@@ -33,7 +38,11 @@ def main():
         'verified_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'commit': commit,
         'working_tree_dirty': dirty,
-        'template_sha256': hashlib.sha256((ROOT / 'infra/cloudfront.yaml').read_bytes()).hexdigest(),
+        'infrastructure_tool': 'Terraform',
+        'terraform_file_sha256': {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                 for path in sorted((ROOT / 'infra/terraform').rglob('*'))
+                                 if '.terraform' not in path.parts and path.is_file()
+                                 and (path.suffix in ('.tf', '.hcl') or path.name == '.terraform.lock.hcl')},
         'checks': [],
     }
     report_path = evidence_dir / 'configuration-validation.json'
@@ -46,7 +55,7 @@ def main():
             print(heading, end='', flush=True)
             log.write(heading)
             try:
-                result = subprocess.run(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=300)
+                result = subprocess.run(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=600)
                 code, output = result.returncode, result.stdout
             except (OSError, subprocess.TimeoutExpired) as error:
                 code, output = 1, str(error) + '\n'

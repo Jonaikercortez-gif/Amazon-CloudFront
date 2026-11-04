@@ -18,6 +18,10 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements-dev.txt
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.17.1'
+          terraform_wrapper: false
       - run: python -m pip install -r requirements-dev.txt
       - name: Validate configuration without deploying AWS resources
         run: python scripts/validate.py
